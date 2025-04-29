@@ -1,0 +1,184 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Новостной агрегатор{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="icon" href="{% static 'img/logo.svg' %}" sizes="any">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <!-- Кастомная шапка -->
+    <header class="header">
+        <div class="container">
+            <a href="{% url 'article_list' %}" class="header-logo"><img src="{% static 'img/logo.svg' %}"></a>
+
+            <!-- Навигация для десктопа -->
+            <nav class="header-nav">
+                <a href="{% url 'article_list' %}">Главная</a>
+            </nav>
+
+            <!-- Пользовательские действия для десктопа -->
+            <div class="header-user">
+                {% if user.is_authenticated %}
+                    <span class="navbar-text">Привет, {{ user.username }}!</span>
+                    <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-light">Выйти</button>
+                    </form>
+                {% else %}
+                    <button class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Войти</button>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">Регистрация</button>
+                {% endif %}
+                <button class="theme-toggle" id="themeToggle" title="Переключить тему">
+                    <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <!-- Иконка солнца (светлая тема) -->
+                        <path class="sun-icon" d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
+                        <!-- Иконка луны (темная тема, скрыта по умолчанию) -->
+                        <path class="moon-icon d-none" d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <button class="btn btn-outline-light d-md-none" id="mobileMenuToggle">
+                <svg class="menu-icon menu-icon-open" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                </svg>
+                <svg class="menu-icon menu-icon-close d-none" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708-1.1 0 0 1-.708.708L8.707 8l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Мобильное меню -->
+        <nav class="header-nav-mobile" id="mobileMenu">
+            <a href="{% url 'article_list' %}">Главная</a>
+            <div class="header-user-mobile">
+                {% if user.is_authenticated %}
+                    <span class="navbar-text">Привет, {{ user.username }}!</span>
+                    <form action="{% url 'logout' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-light w-100">Выйти</button>
+                    </form>
+                {% else %}
+                    <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#loginModal">Войти</button>
+                    <button class="btn btn-primary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#registerModal">Регистрация</button>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="bg-dark text-white mt-5 p-4 text-center">
+        <div class="container">
+            © {% now "Y" %} Новостной агрегатор
+        </div>
+    </footer>
+    {% include 'news/aureg.html' %}
+    {% block scripts %}{% endblock %}
+
+</body>
+<script>
+    $(document).ready(function() {
+        // Функция для получения cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Настройка AJAX для CSRF-токена
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+                }
+            }
+        });
+
+        // Обработка формы логина
+        $('#loginForm').on('submit', function(e) {
+            e.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: $(this).attr('action'),
+                data: $(this).serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        const errorMsg = response.errors || 'Неизвестная ошибка при входе';
+                        alert('Ошибка: ' + errorMsg);
+                    }
+                },
+                error: function(xhr) {
+                    alert('Произошла ошибка при отправке запроса. Статус: ' + xhr.status);
+                }
+            });
+        });
+
+        // Переключение мобильного меню
+        $('#mobileMenuToggle').on('click', function() {
+            $('#mobileMenu').toggleClass('active');
+            // Переключение иконки (гамбургер ↔ крестик)
+            $(this).find('.menu-icon-open').toggleClass('d-none');
+            $(this).find('.menu-icon-close').toggleClass('d-none');
+        });
+
+        // Закрытие меню при клике вне его
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#mobileMenuToggle').length && !$(e.target).closest('#mobileMenu').length) {
+                $('#mobileMenu').removeClass('active');
+                $('#mobileMenuToggle').find('.menu-icon-open').removeClass('d-none');
+                $('#mobileMenuToggle').find('.menu-icon-close').addClass('d-none');
+            }
+        });
+
+        // Переключение темы
+        const themeToggle = $('#themeToggle');
+        const themeIcon = $('#themeIcon');
+        const sunIcon = themeIcon.find('.sun-icon');
+        const moonIcon = themeIcon.find('.moon-icon');
+
+        // Проверка сохраненной темы в localStorage
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            $('body').addClass('dark-theme');
+            sunIcon.addClass('d-none');
+            moonIcon.removeClass('d-none');
+        }
+
+        // Обработчик клика по кнопке переключения темы
+        themeToggle.on('click', function() {
+            $('body').toggleClass('dark-theme');
+
+            if ($('body').hasClass('dark-theme')) {
+                localStorage.setItem('theme', 'dark');
+                sunIcon.addClass('d-none');
+                moonIcon.removeClass('d-none');
+            } else {
+                localStorage.setItem('theme', 'light');
+                sunIcon.removeClass('d-none');
+                moonIcon.addClass('d-none');
+            }
+        });
+    });
+</script>
+</html>

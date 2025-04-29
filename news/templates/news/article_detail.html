@@ -1,0 +1,125 @@
+{% extends 'news/base.html' %}
+{% load reaction_filters %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <article>
+                <h1>{{ article.title }}</h1>
+                <p class="text-muted">
+                    Опубликовано: {{ article.published_at|date:"d.m.Y H:i" }} | 
+                    Источник: {{ article.source.name }} |
+                    {% for category in article.categories.all %}
+                        <span class="badge bg-secondary">{{ category.name }}</span>
+                    {% endfor %}
+                </p>
+                
+                {% if article.image_url %}
+                    <img src="{{ article.image_url }}" class="img-fluid rounded mb-4" alt="{{ article.title }}">
+                {% endif %}
+                
+                <div class="article-content mb-4">
+                    {{ article.full_content|linebreaks }}
+                </div>
+                
+                <div class="reactions mb-4">
+                    <h5>Реакции:</h5>
+                    <div class="d-flex gap-2">
+                        {% for reaction_type, emoji in reaction_choices %}
+                        {% with count=reaction_counts|get_item:reaction_type %}
+                        <form class="reaction-form" action="{% url 'add_reaction' article.id %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="reaction_type" value="{{ reaction_type }}">
+                            <button type="submit"
+                                    class="btn btn-outline-secondary
+                                          {% if user_reaction and user_reaction.reaction_type == reaction_type %}active{% endif %}">
+                                {{ emoji }}
+                                <span class="count">{{ count|default:0 }}</span>
+                            </button>
+                        </form>
+                        {% endwith %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="comments">
+                    <h5>Комментарии ({{ comments.count }}):</h5>
+                    
+                    {% if user.is_authenticated %}
+                        <form method="post" action="{% url 'add_comment' article.id %}" class="mb-4">
+                            {% csrf_token %}
+                            {{ comment_form.text }}
+                            <button type="submit" class="btn btn-primary mt-2">Отправить</button>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#loginModal">Войдите</a>, чтобы оставить комментарий
+                        </div>
+                    {% endif %}
+                    
+                    <div class="list-group">
+                        {% for comment in comments %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ comment.user.username }}</h6>
+                                <small>{{ comment.created_at|timesince }} назад</small>
+                            </div>
+                            <p class="mb-1">{{ comment.text }}</p>
+                        </div>
+                        {% empty %}
+                        <div class="alert alert-secondary">Пока нет комментариев. Будьте первым!</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    Другие новости
+                </div>
+                <div class="card-body">
+                    {% for other in other_articles %}
+                        <div class="mb-3">
+                            <h5><a href="{% url 'article_detail' other.id %}">{{ other.title }}</a></h5>
+                            <small class="text-muted">{{ other.published_at|date:"d.m.Y" }}</small>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        $('.reaction-form').on('submit', function(e) {
+            e.preventDefault();
+            const form = $(this);
+
+            $.ajax({
+                type: 'POST',
+                url: form.attr('action'),
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        location.reload(); // Обновляем страницу
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    const response = xhr.responseJSON;
+                    alert(response?.message || 'Ошибка сервера');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
