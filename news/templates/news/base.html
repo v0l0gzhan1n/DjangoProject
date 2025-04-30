@@ -133,6 +133,25 @@
                 }
             });
         });
+        $('#registerForm').on('submit', function(e) {
+            e.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: $(this).attr('action'),
+                data: $(this).serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        const errorMsg = response.errors || 'Неизвестная ошибка при регистрации';
+                        alert('Ошибка: ' + errorMsg);
+                    }
+                },
+                error: function(xhr) {
+                    alert('Произошла ошибка при отправке запроса. Статус: ' + xhr.status);
+                }
+            });
+        });
 
         // Переключение мобильного меню
         $('#mobileMenuToggle').on('click', function() {
